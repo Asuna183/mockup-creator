@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Pattern Mockup Creator</title>
+    <style>
+      canvas {
+        border: 1px solid #ccc;
+        cursor: crosshair;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Pattern Mockup Creator</h1>
+
+    <label>Original Image:
+      <input type="file" id="originalUpload" accept="image/*" />
+    </label>
+
+    <label>Pattern Image:
+      <input type="file" id="patternUpload" accept="image/*" />
+    </label>
+
+    <br /><br />
+    <canvas id="drawCanvas" width="600" height="800"></canvas>
+
+    <br />
+    <button onclick="submitMockup()">Submit</button>
+
+    <h3>Result</h3>
+    <img id="result" width="400" />
+
+    <script>
+      const canvas = document.getElementById("drawCanvas");
+      const ctx = canvas.getContext("2d");
+      let drawing = false;
+
+      const originalUpload = document.getElementById("originalUpload");
+      const patternUpload = document.getElementById("patternUpload");
+      let originalFile, patternFile;
+
+      originalUpload.addEventListener("change", (e) => {
+        originalFile = e.target.files[0];
+        const img = new Image();
+        img.onload = () => {
+          canvas.width = img.width;
+          canvas.height = img.height;
+          ctx.drawImage(img, 0, 0);
+        };
+        img.src = URL.createObjectURL(originalFile);
+      });
+
+      patternUpload.addEventListener("change", (e) => {
+        patternFile = e.target.files[0];
+      });
+
+      canvas.addEventListener("mousedown", () => (drawing = true));
+      canvas.addEventListener("mouseup", () => (drawing = false));
+      canvas.addEventListener("mousemove", (e) => {
+        if (drawing) {
+          ctx.fillStyle = "red";
+          ctx.beginPath();
+          ctx.arc(e.offsetX, e.offsetY, 15, 0, 2 * Math.PI);
+          ctx.fill();
+        }
+      });
+
+      async function submitMockup() {
+        if (!originalFile || !patternFile) return alert("Upload both files");
+
+        const maskDataUrl = canvas.toDataURL("image/png");
+
+        const formData = new FormData();
+        formData.append("original", originalFile);
+        formData.append("pattern", patternFile);
+        formData.append("mask", maskDataUrl);
+
+        try {
+          const res = await fetch("/generate", {
+            method: "POST",
+            body: formData,
+          });
+          const blob = await res.blob();
+          document.getElementById("result").src = URL.createObjectURL(blob);
+        } catch (err) {
+          alert("Something went wrong 😓");
+          console.error(err);
+        }
+      }
+    </script>
+  </body>
+</html>
+
